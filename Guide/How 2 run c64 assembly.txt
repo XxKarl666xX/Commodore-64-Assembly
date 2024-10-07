@@ -1,0 +1,34 @@
+Install VICE: https://vice-emu.sourceforge.io/
+[used for emulating the Commodore 64]
+
+Install C64Studio: https://www.georg-rottensteiner.de/de/c64.html
+[used for coding and compiling, uses ACME for a universal assembler]
+
+Link C64Studio to your VICE .exe
+
+Basic code structure:
+  ;startup address
+  * = $0801
+
+  ;create BASIC startup (SYS line)
+  !basic
+
+  ;put your code here
+
+  ;return to BASIC
+  rts
+
+Make a new ASM file
+Under driver select "WinVICE"
+Compile
+Build and Run, save the file
+Done
+
+#How to get memory adresses from the C64#
+Get a memory map, for example this:
+https://sta.c64.org/cbm64mem.html
+
+Which instructions are there and what are they doing?
+See the "C64 Assembly Basics.txt" for simple guidance and code snippets or look at the following websites:
+https://www.c64os.com/post/6502instructions
+https://www.pagetable.com/c64ref/6502/?tab=2

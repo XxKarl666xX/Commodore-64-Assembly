@@ -1,0 +1,286 @@
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Basic instruction set for Commodore 64 [not all but just the most important ones for the start]
+made by Dev___1_
+=====================================================================================================================================================================================
+Whats X, Y and accumulator?
+Registers, just like the Stack-Pointer SP or the Statusregister P. Registers are special places on the CPU chip which can be controlled. Basically places where you can move around data, create data and calculate with data.
+In this text based guide I will mostly only use the acumulator, X and Y as this guide isnt meant to go deeply into C64 assembly.
+_____________________________________________________________________________________________________________________________________________________________________________________
+STA $0000	;store the current accumulator value into the memory adress "0000"
+STX $0001	;store the current X value into the memory adress "0001"
+STY $0002	;store the current Y value into the memory adress "0002"
+STA $0003, X    ;store the current accumulator value at address "0003" + X
+STX $0004, Y	;store the current X value into the adress "0004" + Y    
+STY $0005, X    ;store the current Y value into the adress "0005" + X
+_____________________________________________________________________________________________________________________________________________________________________________________
+ORA #%00000000	;poke the bits of the adress which is currently saved in the accumulator to 00000000
+_____________________________________________________________________________________________________________________________________________________________________________________
+INX 		;increment X
+INY		;increment Y
+DEX		;decrement X
+DEY		;decrement Y
+ADC #$1		;increment the accumulator by one
+SEC		;set the carry flag, use before SBC
+SBC		;substract the accumulator by one
+CLC		;clear carry flag, use after ADC
+_____________________________________________________________________________________________________________________________________________________________________________________
+LDA #$FF	;load the value into the accumulator
+LDX #$FF	;load the value into register X
+LDY #$FF	;load the value into register Y
+______________________________________________________________________________________________________________________________________________________________________________________
+loop:		;start a instruction sequence called loop, can go back to the start of this sequence via JMP or JSR
+_____________________________________________________________________________________________________________________________________________________________________________________
+RTS		;return to subroutine, ends the code execution
+_____________________________________________________________________________________________________________________________________________________________________________________
+JMP loop	;jump to instruction sequence called loop
+JMP $0000	;jump to this adress in the code
+_____________________________________________________________________________________________________________________________________________________________________________________
+JSR loop	;jumps to a instruction set called loop, does its instructions and returns to the original code, return adress is on stack
+JSR $0000	;jumps to instruction sequence in this adress, return adress is on stack
+_____________________________________________________________________________________________________________________________________________________________________________________
+BNE loop	;go to instruction sequence "loop" again if last operation is not zero
+BEQ loop	;go to instruction sequence "loop" again if last operation is zero
+BMI loop	;go to instruction sequence "loop" if last operation was negative
+BPL loop	;go to instruction sequence "loop" if last operation was positive
+_____________________________________________________________________________________________________________________________________________________________________________________
+CMP #$FF	;compares the accumulator with FF, will give a 0 if its smaller, CMP substracts whats in accumulator with the given value and sets a flag according to the result
+##Flags##
+(Z)ero Flag	; Set if the result of the subtraction is zero (i.e., the values are equal)
+(N)egative Flag	; Set if the result of the subtraction is negative (i.e., the accumulator is less than the compared value)
+(C)arry Flag	; Set if the accumulator is greater than or equal to the compared value
+=====================================================================================================================================================================================
+
+
+
+
+
+
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Basic possible structures of assembly code for the Commodore 64
+made by Dev___1_
+=====================================================================================================================================================================================
+create a instruction sequence which will loop thorugh itself and increment the accumulator until its 255 and then end. After incrementing accumulator once save the number into the adress for the border background color ---> "D020":
+
+LDA #$00 ;setting accumulator at the start to 0, using it for the color of the border background
+loop: 
+STA $D020 ;store the number from the accumulator to this adress, D020 is used for the border background color
+CLC ;clearing the carry flag to prevent wrong calculations with ADC next
+ADC #$01 ;add 1 to the accumulator
+CMP #$FF ;compare the accumulator with the hex number FF, what truly happens is accumulator - FF = result
+BNE loop ;if the last operation, the comparison, was zero then go out of this sequence, otherwise go back to the start of this sequence, if result = 0, go out of sequence
+
+What you should see: 
+a quick slight "glitch" like looking change of the border background color right after you run the code. Just very short.
+
+Why this might be useful:
+As there arent any delay functions in assembly you need to be creative if you wanna have a artificial delay after instructions. This is where loops come in very useful. By doing basic calculations, which take just a tiny bit of time, you can get a delay effect if you then JSR to this loop. Creating a actual efficient and effective way for a delay is rather hard, same goes for creating a delay with a certain delay time. Trial and error seems to be the way. Creating very basic delay instruction sequences which are not efficient are very easy to do on the other hand.
+_____________________________________________________________________________________________________________________________________________________________________________________
+creating a instruction sequence which will be used for a very simple delay, has around 150ms of delay and uses 99 bytes. The delay can be made longer by using more INX and DEX. These instrctions need only 1 byte and use 2 cycles, perfect for getting a cheap delay. Getting the delay to 500ms is also easily possible with around 300 bytes. It uses unused memory places to save its calculation results so there isnt a need to worry about screwing with the contents of X, which get used for calculating in the delay, in your own code. It might even be smarter to get rid of delay2/3/4 and just have a large collection of consecutive INX and DEX to save on a bit of memory while getting a even larger delay. LDX, STX CPX and BNE all need more memory then INX/DEX while giving less cycles per byte:
+
+;creating my delay for later, using X and free memory for caching results, need to call last so not stuck in forever loop
+delay:
+    CLC
+delay1:
+    LDX $00FC ;adress is unused memory1, not used by the C64 and thus a place to place data in, loading it to X
+    INX ;increment current number thats in X by 1
+    STX $00FC ;save X to the unused memory1
+    CPX #$FF ;compare X to FF
+    BNE delay1 ;if X-FF==0 then end this instruction sequence and go to the next, otherwise repeat
+    LDX #$00 ;load into X the value 0
+    STX $00FC ;store X into the unused memory1
+delay2:
+    LDX $00FD ;unused memory2
+    INX
+    DEX ;decrement X by 1, wasting cycles and thus time
+    INX
+    DEX
+    INX
+    DEX
+    INX
+    DEX
+    INX
+    STX $00FD
+    CPX #$FF
+    BNE delay2
+    LDX #$00
+    STX $00FD
+delay3:
+    LDX $00FD
+    INX
+    DEX
+    INX
+    DEX
+    INX
+    DEX
+    INX
+    STX $00FD
+    CPX #$FF
+    BNE delay3
+    LDX #$00
+    STX $00FD
+    delay4:
+    LDX $00FC
+    INX
+    DEX
+    INX
+    STX $00FC
+    CPX #$FF
+    BNE delay4
+    LDX #$00
+    STX $00FC
+
+
+How to implement it into your own code:
+Copy and paste it at the bottom of your code before the RTS, call it with "JSR delay" in your code whenever needed
+Example, using the border background change code to show better how the colors do actually change:
+
+ ;startup address
+  * = $0801
+
+  ;create BASIC startup (SYS line)
+  !basic
+LDA #$00 ;using this value to change the color
+loop:
+JSR delay
+STA $D020 ;the memory adress for the border background color
+CLC
+ADC #$01
+CMP #$FF
+BNE loop
+
+
+
+
+;creating my delay for later, using X and free memory for caching results, need to call last so not stuck in forever loop
+delay:
+    CLC
+delay1:
+    LDX $00FC ;unused memory1, loading it to X
+    INX ;increment current number thats in X by 1
+    STX $00FC ;save X to the unused memory1
+    CPX #$FF ;compare X to FF
+    BNE delay1 ;if X-FF==0 then end this instruction sequence and go to the next, otherwise repeat
+    LDX #$00 ;load into X the value 0
+    STX $00FC ;store X into the unused memory1
+delay2:
+    LDX $00FD ;unused memory2
+    INX
+    DEX ;decrement X by 1, wasting cycles and thus time
+    INX
+    DEX
+    INX
+    DEX
+    INX
+    DEX
+    INX
+    STX $00FD
+    CPX #$FF
+    BNE delay2
+    LDX #$00
+    STX $00FD
+delay3:
+    LDX $00FD
+    INX
+    DEX
+    INX
+    DEX
+    INX
+    DEX
+    INX
+    STX $00FD
+    CPX #$FF
+    BNE delay3
+    LDX #$00
+    STX $00FD
+    delay4:
+    LDX $00FC
+    INX
+    DEX
+    INX
+    STX $00FC
+    CPX #$FF
+    BNE delay4
+    LDX #$00
+    STX $00FC
+
+
+  ;return to BASIC
+  rts
+
+What you should see:
+the background border colors change wildly very fast, add more INX/DEX to make the delay longer and thus the color change slower --> less epileptic danger
+=====================================================================================================================================================================================
+
+
+
+
+
+
+
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+FAQ
+made by Dev___1_
+=====================================================================================================================================================================================
+
+
+I got so much data and now all my registers are full and its hard to manage my minimal space I have, what now?
+´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´
+While one can write a full assembly program and only use the registers, like X, Y and the accumulator, for saving all their data, its recommended to save the data instead to some unused memory adresses on the C64. After saving a value to one of those unused memory adresses one can load the data after that at some other point again back up to whatever place they want. Thus you keep your registers free and can use and abuse them without worries.
+Unused memory adresses are the following:
+0002
+00FB - 00FF
+002A
+0052
+02A7 - 02FF
+0313
+032E - 032F
+03FC - 03FF
+0800
+07E8 - 07F7
+DBE8 - DBFF
+Source: https://sta.c64.org/cbm64mem.html
+
+
+Why does my emulated screen seem stuck when I play around with your delay code/some custom instruction sequences I made?
+´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´
+Your code might look like the following:
+
+Basic code structure:
+  ;startup address
+  * = $0801
+
+  ;create BASIC startup (SYS line)
+  !basic
+  
+  yourInstructionSequence:
+  ;your code
+  ;more code
+  ;JMP yourInstructionSequence ;jumps back to the start of the sequence
+
+  ;return to BASIC
+  rts
+
+This might look good at the start but its actually not. As it jumps at the end back to the beginning it will never complete your custom sequence... Instead use JSR to jump to your sequence, do it and then go back to your main code.
+Its also extra important to put your custom sequences at the bottom of your code so it wont run straight away and might trap you in a infinte loop. This could happen with a delay instruction sequence. If it starts right of the bet it will actually never finish if you jump straight to it as it will jump up to your code, go down and come back to the jump again, trapping you in a infinite cycle of bullshit.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
